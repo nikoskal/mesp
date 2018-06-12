@@ -1,20 +1,27 @@
 import requests
 import datetime
-from time import time
-from time import sleep
+import time
 import sys
+
+local_url = 'http://localhost:1026'
+okeanos_url = 'http://83.212.109.126:1026'
+
+measurments = []
+cross_ref_unique_ids = []
+
+experimental_results_list = []
 
 def calltoopenweathermap():
     print("Goodbye, World!")
-    url = 'http://api.openweathermap.org/data/2.5/forecast?lat=38.303860&lon=23.730180&cnt=5&appid=3a87a263c645ea5eb18ad7417be4cb0d'
-    print url
-    response = requests.post(url)
+    weather_url = 'http://api.openweathermap.org/data/2.5/forecast?lat=38.303860&lon=23.730180&cnt=5&appid=3a87a263c645ea5eb18ad7417be4cb0d'
+    print weather_url
+    response = requests.post(weather_url)
     print response.json()
 
 
 def getfromorion_id(id):
     print("get from Orion!")
-    url = 'http://localhost:1026/v2/entities/'+id
+    url = _url + '/v2/entities/' + id
     headers = {'Accept': 'application/json', 'X-Auth-Token': 'QGIrJsK6sSyKfvZvnsza6DlgjSUa8t'}
     # print url
     response = requests.get(url, headers=headers)
@@ -24,7 +31,7 @@ def getfromorion_id(id):
 def getfromorion_all():
     print("get from Orion!")
     # payload = {'limit': '500'}
-    url = 'http://localhost:1026/v2/entities?limit=500'
+    url = _url + '/v2/entities?limit=500'
     headers = {'Accept': 'application/json', 'X-Auth-Token': 'QGIrJsK6sSyKfvZvnsza6DlgjSUa8t' }
     # print url
     response = requests.get(url, headers=headers)
@@ -32,14 +39,10 @@ def getfromorion_all():
     return response.json()
 
 
-
-measurments = []
-cross_ref_unique_ids = []
-
-def load_measurments():
+def load_measurments(data_stream):
     sensed_data_list = []
     try:
-        with open("sensed_data_one") as f:
+        with open(data_stream) as f:
             for line in f:
                 key = line.split()
                 sensed_data_list.append(key[0])
@@ -48,11 +51,6 @@ def load_measurments():
         print 'Make sure that negative_list file exists in the same folder as ??.py'
 
     return sensed_data_list
-
-
-experimental_results_list = []
-
-
 
 
 def posttoorion(snapshot_raw):
@@ -73,8 +71,8 @@ def posttoorion(snapshot_raw):
     nodeid = tokens_dict[1].split(":")
     snapshot["nodeid"] = nodeid[1]
 
-    time = tokens_dict[2].split(":")
-    snapshot["sensor_time"] = time[1]
+    _time = tokens_dict[2].split(":")
+    snapshot["sensor_time"] = _time[1]
 
     gps = tokens_dict[3].split(":")
     snapshot["gps"] = gps[1]
@@ -102,7 +100,7 @@ def posttoorion(snapshot_raw):
 
 
     # url = 'http://orion.lab.fiware.org:1026/v2/entities/2107722425'
-    url = 'http://193.190.127.181:1026/v2/entities'
+    url = _url + '/v2/entities'
     headers = {'Accept': 'application/json', 'X-Auth-Token': 'QGIrJsK6sSyKfvZvnsza6DlgjSUa8t'}
     # print url
 
@@ -151,7 +149,7 @@ def posttoorion(snapshot_raw):
     print json
     # print "posting"
 
-    translation_time = ts2-ts1
+    translation_time = ts2-ts1_received
     volume = sys.getsizeof(json)
     print "translation time"
     print "entity id, volume, translation_time"
@@ -169,7 +167,7 @@ def posttoorion(snapshot_raw):
 def post_all(measurments_list):
     print "reading measurment"
     for measurment_one in measurments_list:
-        sleep(1)
+        time.sleep(1)
         print measurment_one
         print "posting"
         posttoorion(measurment_one)
@@ -177,13 +175,6 @@ def post_all(measurments_list):
 
     print "finished"
 
-
-# load measurments from file (1sec interval)
-values = load_measurments()
-#
-post_all(values)
-# print("cross_ref_unique_ids")
-print cross_ref_unique_ids
 
 def retrieve_id():
     for id in cross_ref_unique_ids:
@@ -195,9 +186,22 @@ def retrieve_id():
         else:
             print "not found"
 
-# retrieve_id()
 
-# all = getfromorion_all()
-# print len(all)
+if __name__ == "__main__":
+
+    if(sys.argv[1] != 'local'):
+        _url = local_url
+    else:
+        _url = okeanos_url
+    # load measurments from file (1sec interval)
+    values = load_measurments(sys.argv[2])
+    #
+    post_all(values)
+    # print("cross_ref_unique_ids")
+    print cross_ref_unique_ids
 
 
+    # retrieve_id()
+
+    # all = getfromorion_all()
+    # print len(all)
