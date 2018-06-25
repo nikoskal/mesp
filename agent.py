@@ -1,10 +1,13 @@
 #!/usr/bin/python
 
+import os
 import threading
 import requests
 import datetime
 import time
 import sys
+import serial
+import argparse
 if sys.version_info[0] < 3:
     import Queue
 else:
@@ -22,6 +25,59 @@ cross_ref_unique_ids = []
 experimental_results_list = []
 
 
+def _setup_argparser():
+    """Setup the command line arguments"""
+    # Description
+    parser = argparse.ArgumentParser(
+        description="The agent.py application implements a non-blocking reader"
+                    "on serial usb port or a Kafka server, a translator of the "
+                    "data parsed and a writer to web ContextBroker (Orion)",
+        usage="agent.py [options] service_location")
+
+    # Parameters
+    req_opts = parser.add_argument_group('Parameters')
+    req_opts.add_argument("service_location",
+                          help="the name of the web service to use",
+                          type=str)
+
+    # General Options
+    gen_opts = parser.add_argument_group('General Options')
+    gen_opts.add_argument("--version",
+                          help="print version information and exit",
+                          action="store_true")
+    gen_opts.add_argument("-q", "--quiet",
+                          help="quiet mode, print no warnings and errors",
+                          action="store_true")
+    gen_opts.add_argument("-v", "--verbose",
+                          help="verbose mode, print processing details",
+                          action="store_true")
+    gen_opts.add_argument("-d", "--debug",
+                          help="debug mode, print debug information",
+                          action="store_true")
+    gen_opts.add_argument("-ll", "--log-level", metavar='[l]',
+                          help="use level l for the logger"
+                               "(fatal, error, warn, "
+                               "info, debug, trace)",
+                          type=str,
+                          choices=['fatal', 'error', 'warn',
+                                   'info', 'debug', 'trace'])
+    gen_opts.add_argument("-lc", "--log-config", metavar='[f]',
+                          help="use config file f for the logger",
+                          type=str)
+
+    # Network Options
+    pr_opts = parser.add_argument_group('Process Options')
+    pr_opts.add_argument("-rt", "--read-threads", metavar='[r]ead',
+                          help="How many threads to run as readers",
+                          type=int,
+                          default=1)
+    pr_opts.add_argument("-wt", "--write-threads", metavar='[w]rite',
+                          help="How many threads to run as writers",
+                          type=int,
+                          default=1)
+
+    return parser.parse_args()
+
 class RaspberryReader(threading.Thread):
     def __init__(self, threadID, name, q, istr):
         threading.Thread.__init__(self)
@@ -37,11 +93,12 @@ class RaspberryReader(threading.Thread):
 
 
 class RaspberryWriter(threading.Thread):
-    def __init__(self, threadID, name, q):
+    def __init__(self, threadID, name, q, schema):
         threading.Thread.__init__(self)
         self.threadID = threadID
         self.name = name
-        self.q= q
+        self.q = q
+        self.schema = schema
 
     def run(self):
         print("Starting " + self.name)
@@ -56,14 +113,12 @@ def read_data(threadName, q, istr):
             if line:
                 data = line.split()
             else:
-                # exitFlag = 1
-                #queueLock.release()
                 break
 
             queueLock.acquire()
             q.put(data[0])
             queueLock.release()
-            print("%s processing %s" % (threadName, data))
+            # print("%s processing %s" % (threadName, data))
             time.sleep(1)
         except IOError:
             print('Cannot open file: sensed_data')
@@ -71,13 +126,15 @@ def read_data(threadName, q, istr):
 
 
 def process_data(threadName, q):
-    while not q.empty():
-        queueLock.acquire()
-        data = q.get()
-        queueLock.release()
-        print("%s Got data %s" % (threadName, data))
-        # posttoorion(data)
-        time.sleep(1)
+    while not exitFlag:
+        if not q.empty():
+            queueLock.acquire()
+            data = q.get()
+            queueLock.release()
+            # print("%s Got data %s" % (threadName, data))
+            posttoorion(data, schema)
+        else:
+            continue
 
 
 def calltoopenweathermap():
@@ -121,44 +178,25 @@ def load_measurments(data_stream):
     return sensed_data_list
 
 
-def posttoorion(snapshot_raw):
-    print("parse snapshot")
+def posttoorion(snapshot_raw, schema):
+    print("Parsing data...")
     print(snapshot_raw)
+
+    batches = schema.split(';')[:-1]
+    data = snapshot_raw.split(";")[:-1]
+
+    if len(batches) != len(data):
+        print("Schema and data format are not the same!")
+        raise Exception("Schema and data format are not the same!")
 
     experimental_results = {}
     ts1_received = time.time()
     experimental_results["ts1_received"] = ts1_received
 
-    tokens_dict = snapshot_raw.split(";")
-    # print("after tokenisation")
     snapshot = {}
 
-    date = tokens_dict[0].split(":")
-    snapshot["date"] = date[1]
-
-    nodeid = tokens_dict[1].split(":")
-    snapshot["nodeid"] = nodeid[1]
-
-    _time = tokens_dict[2].split(":")
-    snapshot["sensor_time"] = _time[1]
-
-    gps = tokens_dict[3].split(":")
-    snapshot["gps"] = gps[1]
-
-    humidity = tokens_dict[4].split(":")
-    snapshot["humidity"] = humidity[1]
-
-    flame = tokens_dict[5].split(":")
-    snapshot["flame"] = flame[1]
-
-    temperature_air = tokens_dict[6].split(":")
-    snapshot["temperature_air"] = temperature_air[1]
-
-    gas = tokens_dict[7].split(":")
-    snapshot["gas"] = gas[1]
-
-    temp_soil = tokens_dict[8].split(":")
-    snapshot["temp_soil"] = temp_soil[1]
+    for B, d in zip(batches, data):
+        snapshot[B.lower()] = d
 
     print("Post to Orion!")
     print(snapshot)
@@ -166,53 +204,7 @@ def posttoorion(snapshot_raw):
     pts = datetime.datetime.now().strftime('%s')
     # print(pts)
 
-
-    # url = 'http://orion.lab.fiware.org:1026/v2/entities/2107722425'
-    url = _url + '/v2/entities'
-    headers = {'Accept': 'application/json', 'X-Auth-Token': 'QGIrJsK6sSyKfvZvnsza6DlgjSUa8t'}
-    # print url
-
-    json = {
-
-        "id": str(pts),
-        "type": "Sensor123",
-        "nodeid": {
-            "value": snapshot["nodeid"],
-            "type": "id"
-        },
-        "translation_timestamp": {
-            "value": str(pts),
-            "type": "time"
-        },
-        "sensor_time": {
-            "value":snapshot["sensor_time"],
-            "type":"time"
-        },
-        "gps_location": {
-            "value": snapshot["gps"],
-            "type": "GPS"
-        },
-        "humidity": {
-            "value": snapshot["humidity"],
-            "type": "Number"
-        },
-        "flame": {
-            "value": snapshot["flame"],
-            "type": "Number"
-        },
-        "temperature_air": {
-            "value": snapshot["temperature_air"],
-            "type": "Number"
-        },
-        "gas": {
-            "value": snapshot["gas"],
-            "type": "Number"
-        },
-        "temp_soil": {
-            "value": snapshot["temp_soil"],
-            "type": "Number"
-        }
-    }
+    json = translate(snapshot, pts)
     ts2 = time.time()
     print(json)
     # print "posting"
@@ -223,13 +215,55 @@ def posttoorion(snapshot_raw):
     print("entity id, volume, translation_time")
     print(str(pts), volume, translation_time)
 
-    response = requests.post(url, headers=headers, json=json)
+    if _url:
+        url = _url + '/v2/entities'
+        headers = {'Accept': 'application/json', 'X-Auth-Token': 'QGIrJsK6sSyKfvZvnsza6DlgjSUa8t'}
+        # print url
+        response = requests.post(url, headers=headers, json=json)
 
-    print("response")
-    print(response.text)
+        print("response")
+        print(response.text)
+
     cross_ref_unique_ids.append(str(pts))
     print("list of ids translated and send:")
     print(str(pts))
+
+
+def translate(snapshot_dict, timestamp):
+
+    json = {
+
+        "id": str(timestamp),
+        "type": "Sensor123",
+        "translation_timestamp": {
+            "value": str(timestamp),
+            "type": "time"
+        }
+    }
+
+    value = dict()
+    types = {
+            'nodeid': 'id',
+            'gps_location': 'GPS',
+            'humidity': 'Number',
+            'flame': 'Number',
+            'temp-air': 'Number',
+            'gas': 'Number',
+            'temp-soil': 'Number',
+            'uniqueid': 'time',
+            'epoch': 'time'
+    }
+    for k,v in snapshot_dict.iteritems():
+        if '#' in k:
+            k = k[:-2]
+        if 'gps' in k:
+            k = 'gps_location'
+        value[k] = {
+            "value": v,
+            "type": types[k]
+        }
+        json.update(value)
+    print(json)
 
 
 def post_all(measurments_list):
@@ -258,20 +292,46 @@ def retrieve_id():
 # Create two threads
 if __name__ == "__main__":
 
-    if(sys.argv[1] != 'local'):
-        _url = local_url
+    args = _setup_argparser()
+    if not os.path.isfile(args.service_location):
+        _url = args.service_location + '_url'
+        istream = serial.Serial(
+                '/dev/ttyUSB0',
+                baudrate=38400,
+                timeout=2,
+                bytesize=serial.EIGHTBITS,
+                parity=serial.PARITY_NONE,
+                stopbits=serial.STOPBITS_ONE,
+                xonxoff=False
+        )
     else:
-        _url = okeanos_url
+        _url = ''
+        istream = open(args.service_location, 'r')
 
-    readerThreadList = ["Reader-1", "Reader-2", "Reader-3", "Reader-4"]
-    writerThreadList = ["Writer-1", "Writer-2", "Writer-3"]
-    #nameList = ["One", "Two", "Three", "Four", "Five"]
+
+    readerThreadList = []
+    for i in range(args.read_threads):
+        readerThreadList.append("Reader-"+ str(i+1))
+
+    writerThreadList = []
+    for i in range(args.write_threads):
+        writerThreadList.append("Writer-"+ str(i+1))
+
     queueLock = threading.Lock()
     workQueue = Queue.Queue()
     threads = []
     threadID = 1
 
-    istream = open(sys.argv[2], 'r')
+    try:
+        print("Reading schema of data...")
+        schema = istream.readline();
+        if not schema:
+            raise Exception
+        print("Starting receiving data...")
+    except Exception as e:
+        print("Could not read schema!")
+        sys.exit(-1)
+
     # Create new threads
     for tName in readerThreadList:
         thread = RaspberryReader(threadID, tName, workQueue, istream)
@@ -280,16 +340,10 @@ if __name__ == "__main__":
         threadID += 1
 
     for tName in writerThreadList:
-        thread = RaspberryWriter(threadID, tName, workQueue)
+        thread = RaspberryWriter(threadID, tName, workQueue, schema)
         thread.start()
         threads.append(thread)
         threadID += 1
-
-    # Fill the queue
-    #queueLock.acquire()
-    #for word in nameList:
-    #    workQueue.put(word)
-    #queueLock.release()
 
     # Wait for queue to empty
     #while not exitFlag:
