@@ -7,6 +7,7 @@ import datetime
 import time
 import sys
 import serial
+import re
 import argparse
 if sys.version_info[0] < 3:
     import Queue
@@ -23,6 +24,10 @@ measurments = []
 cross_ref_unique_ids = []
 
 experimental_results_list = []
+
+
+def findWholeWord(w):
+    return re.compile(r'\b({0})\b'.format(w), flags=re.IGNORECASE).search
 
 
 def _setup_argparser():
@@ -65,7 +70,7 @@ def _setup_argparser():
                           help="use config file f for the logger",
                           type=str)
 
-    # Network Options
+    # Process Options
     pr_opts = parser.add_argument_group('Process Options')
     pr_opts.add_argument("-rt", "--read-threads", metavar='[r]ead',
                           help="How many threads to run as readers",
@@ -75,6 +80,11 @@ def _setup_argparser():
                           help="How many threads to run as writers",
                           type=int,
                           default=1)
+
+    pr_opts.add_argument("-usb", "--usb-port", metavar='[u]sbport',
+                          help="Which usb port to read from",
+                          type=int,
+                          default=0)
 
     return parser.parse_args()
 
@@ -110,10 +120,17 @@ def read_data(threadName, q, istr):
     while not exitFlag:
         try:
             line = istr.readline()
+            # istr.reset_input_buffer()
+            istr.flushInput()
+            istr.flushOutput()
+            # if line:
+            # if findWholeWord('UNIQUEDID'):
+
             if line:
                 data = line.split()
             else:
-                break
+                continue
+                # break
 
             queueLock.acquire()
             q.put(data[0])
@@ -219,7 +236,7 @@ def posttoorion(snapshot_raw, schema):
         url = _url + '/v2/entities'
         headers = {'Accept': 'application/json', 'X-Auth-Token': 'QGIrJsK6sSyKfvZvnsza6DlgjSUa8t'}
         # print url
-        response = requests.post(url, headers=headers, json=json)
+        response = requests.post(url, json=json)
 
         print("response")
         print(response.text)
@@ -264,6 +281,7 @@ def translate(snapshot_dict, timestamp):
         }
         json.update(value)
     print(json)
+    return json
 
 
 def post_all(measurments_list):
@@ -294,9 +312,12 @@ if __name__ == "__main__":
 
     args = _setup_argparser()
     if not os.path.isfile(args.service_location):
-        _url = args.service_location + '_url'
+        if 'okeanos' in args.service_location:
+            _url = okeanos_url
+        else:
+            _url = local_url
         istream = serial.Serial(
-                '/dev/ttyUSB0',
+                '/dev/ttyUSB'+str(args.usb_port),
                 baudrate=38400,
                 timeout=2,
                 bytesize=serial.EIGHTBITS,
@@ -324,9 +345,14 @@ if __name__ == "__main__":
 
     try:
         print("Reading schema of data...")
-        schema = istream.readline();
-        if not schema:
-            raise Exception
+        while True:
+            # schema = istream.readline();
+            schema = "UNIQUEID;NODEID;GPS#1;EPOCH;HUMIDITY#1;FLAME#1;TEMP-AIR#1;GAS#1;TEMP-SOIL#1;"
+            if not schema:
+                continue
+            else:
+                print(schema)
+                break
         print("Starting receiving data...")
     except Exception as e:
         print("Could not read schema!")
