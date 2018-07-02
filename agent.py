@@ -37,10 +37,13 @@ def _setup_argparser():
         description="The agent.py application implements a non-blocking reader"
                     "on serial usb port or a Kafka server, a translator of the "
                     "data parsed and a writer to web ContextBroker (Orion)",
-        usage="agent.py [options] service_location")
+        usage="agent.py [options] input_stream service_location")
 
     # Parameters
     req_opts = parser.add_argument_group('Parameters')
+    req_opts.add_argument("input_stream",
+                          help="the source of input stream to read kafka/serial",
+                          type=str)
     req_opts.add_argument("service_location",
                           help="the name of the web service to use",
                           type=str)
@@ -80,11 +83,13 @@ def _setup_argparser():
                           help="How many threads to run as writers",
                           type=int,
                           default=1)
-
     pr_opts.add_argument("-usb", "--usb-port", metavar='[u]sbport',
                           help="Which usb port to read from",
                           type=int,
                           default=0)
+    pr_opts.add_argument("-kf", "--kafka-url", metavar='[k]afka-url',
+                          help="Where Kafka server is located",
+                          type=str)
 
     return parser.parse_args()
 
@@ -316,6 +321,7 @@ if __name__ == "__main__":
             _url = okeanos_url
         else:
             _url = local_url
+    if args.input_stream == 'serial':
         istream = serial.Serial(
                 '/dev/ttyUSB'+str(args.usb_port),
                 baudrate=38400,
@@ -325,9 +331,17 @@ if __name__ == "__main__":
                 stopbits=serial.STOPBITS_ONE,
                 xonxoff=False
         )
-    else:
+    elif args.input_stream == 'file':
         _url = ''
         istream = open(args.service_location, 'r')
+    elif args.input_stream == 'kafka':
+        _url = ''
+        istream = ''
+    else:
+        print("This is not a valid input stream!")
+        print("Please provide one of the following:")
+        print("serial/file/kafka")
+        sys.exit(-1)
 
 
     readerThreadList = []
