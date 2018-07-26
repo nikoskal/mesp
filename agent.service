@@ -1,0 +1,13 @@
+[Unit]
+Description=Serial Agent
+After=network.target
+
+[Service]
+Type=simple
+User=pi
+EnvironmentFile=/etc/agent.conf
+ExecStart=/home/pi/mesp/agent.py $ARG0 $ARG1
+Restart=on-failure # or always, on-abort, etc
+
+[Install]
+WantedBy=multi-user.target
