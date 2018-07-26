@@ -13,6 +13,8 @@ if sys.version_info[0] < 3:
     import Queue
 else:
     import queue as Queue
+from pykafka.simpleconsumer import SimpleConsumer
+from serial.serialposix import Serial
 
 
 exitFlag = 0
@@ -90,15 +92,19 @@ def _setup_argparser():
     pr_opts.add_argument("-kf", "--kafka-url", metavar='[k]afka-url',
                           help="Where Kafka server is located",
                           type=str)
+    pr_opts.add_argument("-kt", "--kafka-topic", metavar='[k]afka-topic',
+                          help="Topic to consume from",
+                          type=str)
 
     return parser.parse_args()
 
-class RaspberryReader(threading.Thread):
+
+class KafkaReader(threading.Thread):
     def __init__(self, threadID, name, q, istr):
         threading.Thread.__init__(self)
         self.threadID = threadID
         self.name = name
-        self.q= q
+        self.q = q
         self.istr = istr
 
     def run(self):
@@ -107,7 +113,21 @@ class RaspberryReader(threading.Thread):
         print("Exiting " + self.name)
 
 
-class RaspberryWriter(threading.Thread):
+class RaspberryReader(threading.Thread):
+    def __init__(self, threadID, name, q, istr):
+        threading.Thread.__init__(self)
+        self.threadID = threadID
+        self.name = name
+        self.q = q
+        self.istr = istr
+
+    def run(self):
+        print("Starting " + self.name)
+        read_data(self.name, self.q, self.istr)
+        print("Exiting " + self.name)
+
+
+class OrionWriter(threading.Thread):
     def __init__(self, threadID, name, q, schema):
         threading.Thread.__init__(self)
         self.threadID = threadID
@@ -124,18 +144,21 @@ class RaspberryWriter(threading.Thread):
 def read_data(threadName, q, istr):
     while not exitFlag:
         try:
-            line = istr.readline()
-            # istr.reset_input_buffer()
-            istr.flushInput()
-            istr.flushOutput()
-            # if line:
-            # if findWholeWord('UNIQUEDID'):
+            if isinstance(istr, (Serial, file)):
+                line = istr.readline()
+                # istr.reset_input_buffer()
+                istr.flushInput()
+                istr.flushOutput()
+                # if line:
+                # if findWholeWord('UNIQUEDID'):
 
-            if line:
-                data = line.split()
-            else:
-                continue
-                # break
+                if line:
+                    data = line.split()
+                else:
+                    continue
+                    # break
+            if isinstance(istr, SimpleConsumer):
+                data = consumer.consume()
 
             queueLock.acquire()
             q.put(data[0])
@@ -322,6 +345,8 @@ if __name__ == "__main__":
         else:
             _url = local_url
     if args.input_stream == 'serial':
+        readerClass = RaspberryReader
+        writerClass = OrionWriter
         istream = serial.Serial(
                 '/dev/ttyUSB'+str(args.usb_port),
                 baudrate=38400,
@@ -332,11 +357,15 @@ if __name__ == "__main__":
                 xonxoff=False
         )
     elif args.input_stream == 'file':
-        _url = ''
+        readerClass = RaspberryReader
+        writerClass = OrionWriter
         istream = open(args.service_location, 'r')
     elif args.input_stream == 'kafka':
-        _url = ''
-        istream = ''
+        readerClass = KafkaReader
+        writerClass = OrionWriter
+        client = KafkaClient(hosts=args.kafka_url)
+        topic = client.topics[args.kafka_topic]
+        istream = t.get_simple_consumer()
     else:
         print("This is not a valid input stream!")
         print("Please provide one of the following:")
@@ -374,13 +403,13 @@ if __name__ == "__main__":
 
     # Create new threads
     for tName in readerThreadList:
-        thread = RaspberryReader(threadID, tName, workQueue, istream)
+        thread = readerClass(threadID, tName, workQueue, istream)
         thread.start()
         threads.append(thread)
         threadID += 1
 
     for tName in writerThreadList:
-        thread = RaspberryWriter(threadID, tName, workQueue, schema)
+        thread = writerClass(threadID, tName, workQueue, schema)
         thread.start()
         threads.append(thread)
         threadID += 1
