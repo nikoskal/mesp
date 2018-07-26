@@ -6,7 +6,7 @@ After=network.target
 Type=simple
 User=pi
 EnvironmentFile=/etc/agent.conf
-ExecStart=/home/pi/mesp/agent.py $ARG0 $ARG1
+ExecStart=/home/pi/iot2edge/mesp/agent.py $ARG0 $ARG1
 Restart=on-failure # or always, on-abort, etc
 
 [Install]
