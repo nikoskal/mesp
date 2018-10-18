@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 import os
 import threading
@@ -13,7 +13,13 @@ if sys.version_info[0] < 3:
     import Queue
 else:
     import queue as Queue
+
 from pykafka.simpleconsumer import SimpleConsumer
+
+from confluent_kafka import Consumer, KafkaError
+from confluent_kafka.avro import AvroConsumer
+from confluent_kafka.avro.serializer import SerializerError
+
 from serial.serialposix import Serial
 
 
@@ -157,8 +163,17 @@ def read_data(threadName, q, istr):
                 else:
                     continue
                     # break
-            if isinstance(istr, SimpleConsumer):
-                data = consumer.consume()
+            if isinstance(istr, Consumer):
+                msg =istr.poll(1.0)
+                if not msg:
+                    continue
+                if msg.error():
+                    if msg.error().code() == KafkaError._PARTITION_EOF:
+                        continue
+                    else:
+                        print(msg.error())
+                        break
+                data = msg.value().decode('utf-8')
 
             queueLock.acquire()
             q.put(data[0])
@@ -363,9 +378,25 @@ if __name__ == "__main__":
     elif args.input_stream == 'kafka':
         readerClass = KafkaReader
         writerClass = OrionWriter
-        client = KafkaClient(hosts=args.kafka_url)
-        topic = client.topics[args.kafka_topic]
-        istream = t.get_simple_consumer()
+        #client = KafkaClient(hosts=args.kafka_url)
+        c = Consumer({
+            'bootstrap.servers': args.kafka_url,
+            'group.id': 'ntua_iot2edge',
+            'auto.offset.reset': 'earliest'
+            })
+        c.subscribe([args.kafka_topic])
+        istream = c
+    elif args.input_stream == 'avro':
+        readerClass = KafkaReader
+        writerClass = OrionWriter
+        c = AvroConsumer({
+            'bootstrap.servers': args.kafka_url,
+            'group.id': 'ntua_iot2edge',
+            'schema.registry.url': 'http://eagle5.di.uoa.gr:8081/subjects/porto_Location-value/versions/latest'
+            })
+
+        c.subscribe([args.kafka_topic])
+        istream = c
     else:
         print("This is not a valid input stream!")
         print("Please provide one of the following:")
