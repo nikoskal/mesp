@@ -6,6 +6,7 @@ import requests
 import datetime
 import time
 import sys
+import ConfigParser
 import serial
 import re
 import argparse
@@ -25,8 +26,6 @@ from serial.serialposix import Serial
 
 exitFlag = 0
 
-local_url = 'http://localhost:1026'
-okeanos_url = 'http://83.212.109.126:1026'
 
 measurments = []
 cross_ref_unique_ids = []
@@ -47,17 +46,12 @@ def _setup_argparser():
                     "data parsed and a writer to web ContextBroker (Orion)",
         usage="agent.py [options] input_stream service_location")
 
-    # Parameters
-    req_opts = parser.add_argument_group('Parameters')
-    req_opts.add_argument("input_stream",
-                          help="the source of input stream to read kafka/serial",
-                          type=str)
-    req_opts.add_argument("service_location",
-                          help="the name of the web service to use",
-                          type=str)
-
     # General Options
     gen_opts = parser.add_argument_group('General Options')
+    gen_opts.add_argument("-f", "--config-file", metavar="[c]onfig-file",
+                          help="Configuration file for agent.py",
+                          type=str,
+                          default="agent.ini")
     gen_opts.add_argument("--version",
                           help="print version information and exit",
                           action="store_true")
@@ -114,12 +108,12 @@ class KafkaReader(threading.Thread):
         self.istr = istr
 
     def run(self):
-        print("Starting " + self.name)
+        print("Starting Kafka " + self.name)
         read_data(self.name, self.q, self.istr)
-        print("Exiting " + self.name)
+        print("Exiting Kafka " + self.name)
 
 
-class RaspberryReader(threading.Thread):
+class SerialReader(threading.Thread):
     def __init__(self, threadID, name, q, istr):
         threading.Thread.__init__(self)
         self.threadID = threadID
@@ -128,9 +122,9 @@ class RaspberryReader(threading.Thread):
         self.istr = istr
 
     def run(self):
-        print("Starting " + self.name)
+        print("Starting Serial " + self.name)
         read_data(self.name, self.q, self.istr)
-        print("Exiting " + self.name)
+        print("Exiting Serial " + self.name)
 
 
 class OrionWriter(threading.Thread):
@@ -142,9 +136,9 @@ class OrionWriter(threading.Thread):
         self.schema = schema
 
     def run(self):
-        print("Starting " + self.name)
+        print("Starting Orion " + self.name)
         process_data(self.name, self.q)
-        print("Exiting " + self.name)
+        print("Exiting Orion " + self.name)
 
 
 def read_data(threadName, q, istr):
@@ -354,16 +348,19 @@ def retrieve_id():
 if __name__ == "__main__":
 
     args = _setup_argparser()
-    if not os.path.isfile(args.service_location):
-        if 'okeanos' in args.service_location:
-            _url = okeanos_url
-        else:
-            _url = local_url
-    if args.input_stream == 'serial':
-        readerClass = RaspberryReader
+
+    config =  ConfigParser.ConfigParser()
+    config.read(args.config_file)
+    SERIAL = lambda p: config.get('SERIAL', p)
+    KAFKA = lambda p: config.get('KAFKA', p)
+    ORION = lambda p: config.get('ORION', p)
+
+    _url = ORION('BROKER')
+    if config.has_option('SERIAL', 'USB_PORT'):
+        readerClass = SerialReader
         writerClass = OrionWriter
         istream = serial.Serial(
-                '/dev/ttyUSB'+str(args.usb_port),
+                '/dev/ttyUSB'+SERIAL('USB_PORT'),
                 baudrate=38400,
                 timeout=2,
                 bytesize=serial.EIGHTBITS,
@@ -371,36 +368,37 @@ if __name__ == "__main__":
                 stopbits=serial.STOPBITS_ONE,
                 xonxoff=False
         )
-    elif args.input_stream == 'file':
-        readerClass = RaspberryReader
+    elif config.has_option('SERIAL', 'FILE'):
+        readerClass = SerialReader
         writerClass = OrionWriter
-        istream = open(args.service_location, 'r')
-    elif args.input_stream == 'kafka':
+        istream = open(SERIAL('FILE'), 'r')
+    elif config.has_option('KAFKA', 'BROKER'):
+        # Check for essential parameters
+        if not(KAFKA('BROKER') or KAFKA('GROUP') or KAFKA('TOPIC')):
+            print("Please specify all the parameters BROKER/GROUP/TOPIC for Kafka")
+            sys.exit(-1)
+
         readerClass = KafkaReader
         writerClass = OrionWriter
         #client = KafkaClient(hosts=args.kafka_url)
-        c = Consumer({
-            'bootstrap.servers': args.kafka_url,
-            'group.id': 'ntua_iot2edge',
-            'auto.offset.reset': 'earliest'
-            })
-        c.subscribe([args.kafka_topic])
-        istream = c
-    elif args.input_stream == 'avro':
-        readerClass = KafkaReader
-        writerClass = OrionWriter
-        c = AvroConsumer({
-            'bootstrap.servers': args.kafka_url,
-            'group.id': 'ntua_iot2edge',
-            'schema.registry.url': 'http://eagle5.di.uoa.gr:8081/subjects/porto_Location-value/versions/latest'
-            })
-
-        c.subscribe([args.kafka_topic])
+        if config.has_option('KAFKA', 'SCHEMA'):
+            c = AvroConsumer({
+                'bootstrap.servers': KAFKA('BROKER'),
+                'group.id': KAFKA('GROUP'),
+                'schema.registry.url': KAFKA('SCHEMA')
+                })
+        else:
+            c = Consumer({
+                'bootstrap.servers': KAFKA('BROKER'),
+                'group.id': KAFKA('GROUP'),
+                'auto.offset.reset': 'earliest'
+                })
+        c.subscribe([KAFKA('TOPIC')])
         istream = c
     else:
-        print("This is not a valid input stream!")
-        print("Please provide one of the following:")
-        print("serial/file/kafka")
+        print("Configuration file does not provide any input stream")
+        print("Please provide one of the following inputs:")
+        print("SERIAL/KAFKA")
         sys.exit(-1)
 
 
