@@ -7,7 +7,7 @@ Type=simple
 StandardOutput=journal
 StandardError=journal
 User=lebowski
-ExecStart=/home/lebowski/code/ntua/mesp/agent.py -f /home/lebowski/code/ntua/mesp/agent.ini
+ExecStart=
 Restart=on-failure
 
 [Install]
