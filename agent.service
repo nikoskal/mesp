@@ -4,7 +4,9 @@ After=network.target
 
 [Service]
 Type=simple
-User=pi
+StandardOutput=journal
+StandardError=journal
+User=lebowski
 ExecStart=/home/lebowski/code/ntua/mesp/agent.py -f /home/lebowski/code/ntua/mesp/agent.ini
 Restart=on-failure
 

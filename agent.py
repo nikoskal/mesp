@@ -1,15 +1,17 @@
-#!/usr/bin/env python
+#!/home/lebowski/.virtualenvs/iot2edge/bin/python
 
 import os
 import threading
 import requests
 import datetime
+import logging
 import time
 import sys
 import ConfigParser
 import serial
 import re
 import argparse
+from systemd.journal import JournaldLogHandler
 if sys.version_info[0] < 3:
     import Queue
 else:
@@ -23,6 +25,18 @@ from confluent_kafka.avro.serializer import SerializerError
 
 from serial.serialposix import Serial
 
+# Add a logger
+logger = logging.getLogger(__name__)
+# instantiate the JournaldLogHandler to hook into systemd
+journald_handler = JournaldLogHandler()
+# set a formatter to include the level name
+journald_handler.setFormatter(logging.Formatter(
+        '[%(levelname)s] %(message)s'
+))
+# add the journald handler to the current logger
+logger.addHandler(journald_handler)
+# optionally set the logging level
+logger.setLevel(logging.DEBUG)
 
 exitFlag = 0
 
@@ -108,9 +122,9 @@ class KafkaReader(threading.Thread):
         self.istr = istr
 
     def run(self):
-        print("Starting Kafka " + self.name)
+        logger.info("Starting Kafka " + self.name)
         read_data(self.name, self.q, self.istr)
-        print("Exiting Kafka " + self.name)
+        logger.info("Exiting Kafka " + self.name)
 
 
 class SerialReader(threading.Thread):
@@ -122,9 +136,9 @@ class SerialReader(threading.Thread):
         self.istr = istr
 
     def run(self):
-        print("Starting Serial " + self.name)
+        logger.info("Starting Serial " + self.name)
         read_data(self.name, self.q, self.istr)
-        print("Exiting Serial " + self.name)
+        logger.info("Exiting Serial " + self.name)
 
 
 class OrionWriter(threading.Thread):
@@ -136,9 +150,9 @@ class OrionWriter(threading.Thread):
         self.schema = schema
 
     def run(self):
-        print("Starting Orion " + self.name)
+        logger.info("Starting Orion " + self.name)
         process_data(self.name, self.q)
-        print("Exiting Orion " + self.name)
+        logger.info("Exiting Orion " + self.name)
 
 
 def read_data(threadName, q, istr):
@@ -165,18 +179,19 @@ def read_data(threadName, q, istr):
                     if msg.error().code() == KafkaError._PARTITION_EOF:
                         continue
                     else:
-                        print(msg.error())
+                        logger.debug(msg.error())
                         break
                 data = msg.value().decode('utf-8')
+                logger.debug(data)
 
             queueLock.acquire()
-            q.put(data[0])
+            #q.put(data[0])
             queueLock.release()
             # print("%s processing %s" % (threadName, data))
             time.sleep(1)
         except IOError:
-            print('Cannot open file: sensed_data')
-            print('Make sure that negative_list file exists in the same folder as ??.py')
+            logger.debug('Cannot open file: sensed_data')
+            logger.debug('Make sure that negative_list file exists in the same folder as ??.py')
 
 
 def process_data(threadName, q):
@@ -192,15 +207,15 @@ def process_data(threadName, q):
 
 
 def calltoopenweathermap():
-    print("Goodbye, World!")
+    logger.debug("Goodbye, World!")
     weather_url = 'http://api.openweathermap.org/data/2.5/forecast?lat=38.303860&lon=23.730180&cnt=5&appid=3a87a263c645ea5eb18ad7417be4cb0d'
-    print(weather_url)
+    logger.debug(weather_url)
     response = requests.post(weather_url)
-    print(response.json())
+    logger.debug(response.json())
 
 
 def getfromorion_id(id):
-    print("get from Orion!")
+    logger.debug("get from Orion!")
     url = _url + '/v2/entities/' + id
     headers = {'Accept': 'application/json', 'X-Auth-Token': 'QGIrJsK6sSyKfvZvnsza6DlgjSUa8t'}
     # print url
@@ -209,7 +224,7 @@ def getfromorion_id(id):
 
 
 def getfromorion_all():
-    print("get from Orion!")
+    logger.debug("get from Orion!")
     # payload = {'limit': '500'}
     url = _url + '/v2/entities?limit=500'
     headers = {'Accept': 'application/json', 'X-Auth-Token': 'QGIrJsK6sSyKfvZvnsza6DlgjSUa8t' }
@@ -227,20 +242,20 @@ def load_measurments(data_stream):
                 key = line.split()
                 sensed_data_list.append(key[0])
     except IOError:
-        print('Cannot open file: sensed_data')
-        print('Make sure that negative_list file exists in the same folder as ??.py')
+        logger.debug('Cannot open file: sensed_data')
+        logger.debug('Make sure that negative_list file exists in the same folder as ??.py')
     return sensed_data_list
 
 
 def posttoorion(snapshot_raw, schema):
-    print("Parsing data...")
-    print(snapshot_raw)
+    logger.info("Parsing data...")
+    logger.info(snapshot_raw)
 
     batches = schema.split(';')[:-1]
     data = snapshot_raw.split(";")[:-1]
 
     if len(batches) != len(data):
-        print("Schema and data format are not the same!")
+        logger.debug("Schema and data format are not the same!")
         raise Exception("Schema and data format are not the same!")
 
     experimental_results = {}
@@ -252,22 +267,22 @@ def posttoorion(snapshot_raw, schema):
     for B, d in zip(batches, data):
         snapshot[B.lower()] = d
 
-    print("Post to Orion!")
-    print(snapshot)
+    logger.info("Post to Orion!")
+    logger.info(snapshot)
     # print("TIME")
     pts = datetime.datetime.now().strftime('%s')
     # print(pts)
 
     json = translate(snapshot, pts)
     ts2 = time.time()
-    print(json)
+    logger.debug(json)
     # print "posting"
 
     translation_time = ts2-ts1_received
     volume = sys.getsizeof(json)
-    print("translation time")
-    print("entity id, volume, translation_time")
-    print(str(pts), volume, translation_time)
+    logger.debug("translation time")
+    logger.info("entity id, volume, translation_time")
+    logger.info(str(pts), volume, translation_time)
 
     if _url:
         url = _url + '/v2/entities'
@@ -275,12 +290,12 @@ def posttoorion(snapshot_raw, schema):
         # print url
         response = requests.post(url, json=json)
 
-        print("response")
-        print(response.text)
+        logger.debug("response")
+        logger.debug(response.text)
 
     cross_ref_unique_ids.append(str(pts))
-    print("list of ids translated and send:")
-    print(str(pts))
+    logger.debug("list of ids translated and send:")
+    logger.debug(str(pts))
 
 
 def translate(snapshot_dict, timestamp):
@@ -317,31 +332,31 @@ def translate(snapshot_dict, timestamp):
             "type": types[k]
         }
         json.update(value)
-    print(json)
+    logger.debug(json)
     return json
 
 
 def post_all(measurments_list):
-    print("reading measurment")
+    logger.debug("reading measurment")
     for measurment_one in measurments_list:
         time.sleep(1)
-        print(measurment_one)
-        print("posting")
+        logger.debug(measurment_one)
+        logger.debug("posting")
         posttoorion(measurment_one)
-        print("done")
+        logger.debug("done")
 
-    print("finished")
+    logger.debug("finished")
 
 
 def retrieve_id():
     for id in cross_ref_unique_ids:
-        print("retrieving : " + str(id))
+        logger.debug("retrieving : " + str(id))
         res = getfromorion_id(id)
-        print(res['id'])
+        logger.debug(res['id'])
         if res['id'] == id:
-            print("found")
+            logger.debug("found")
         else:
-            print("not found")
+            logger.debug("not found")
 
 
 # Create two threads
@@ -375,7 +390,7 @@ if __name__ == "__main__":
     elif config.has_option('KAFKA', 'BROKER'):
         # Check for essential parameters
         if not(KAFKA('BROKER') or KAFKA('GROUP') or KAFKA('TOPIC')):
-            print("Please specify all the parameters BROKER/GROUP/TOPIC for Kafka")
+            logger.debug("Please specify all the parameters BROKER/GROUP/TOPIC for Kafka")
             sys.exit(-1)
 
         readerClass = KafkaReader
@@ -396,9 +411,9 @@ if __name__ == "__main__":
         c.subscribe([KAFKA('TOPIC')])
         istream = c
     else:
-        print("Configuration file does not provide any input stream")
-        print("Please provide one of the following inputs:")
-        print("SERIAL/KAFKA")
+        logger.debug("Configuration file does not provide any input stream")
+        logger.debug("Please provide one of the following inputs:")
+        logger.debug("SERIAL/KAFKA")
         sys.exit(-1)
 
 
@@ -416,18 +431,18 @@ if __name__ == "__main__":
     threadID = 1
 
     try:
-        print("Reading schema of data...")
+        logger.info("Reading schema of data...")
         while True:
             # schema = istream.readline();
-            schema = "UNIQUEID;NODEID;GPS#1;EPOCH;HUMIDITY#1;FLAME#1;TEMP-AIR#1;GAS#1;TEMP-SOIL#1;"
+            schema = SERIAL('SCHEMA')
             if not schema:
                 continue
             else:
-                print(schema)
+                logger.info(schema)
                 break
-        print("Starting receiving data...")
+        logger.debug("Starting receiving data...")
     except Exception as e:
-        print("Could not read schema!")
+        logger.debug("Could not read schema!")
         sys.exit(-1)
 
     # Create new threads
@@ -450,7 +465,7 @@ if __name__ == "__main__":
     # Wait for threads to complete
     for t in threads:
         t.join()
-    print("Exiting Main thread!")
+    logger.info("Exiting Main thread!")
 
     # load measurments from file (1sec interval)
     #values = load_measurments(sys.argv[2])
