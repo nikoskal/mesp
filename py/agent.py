@@ -1,6 +1,7 @@
-#!/home/lebowski/.virtualenvs/iot2edge/bin/python
+#!/usr/bin/python
 
 import os
+import platform
 import threading
 import requests
 import datetime
@@ -394,7 +395,7 @@ if __name__ == "__main__":
         istream = open(SERIAL('FILE'), 'r')
     elif config.has_option('KAFKA', 'BROKER'):
         (os, ver, _) = platform.linux_distribution()
-        if( os != 'debian' or int(ver) < 9):
+        if( os != 'debian' or float(ver) < 9.0):
             print("OS version does not support Kafka consumer.")
             print("Please upgrade to Debian version >=9 (Stretch).")
             sys.exit(-1)
