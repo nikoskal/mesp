@@ -1,13 +1,19 @@
 #!/bin/bash
 
-PWD=$(pwd)
+MESPDIR=$(pwd)
 # Check the OS version and install according packages manually
+echo "Checking OS version requirements..."
+echo "\n"
+echo "\n"
 debian_version=`egrep "jessie|stretch" /etc/os-release`
 if [ `echo $debian_version|grep -c "jessie"` == 1  ]
 then
     echo "No Kafka support provided for Raspbian Jessie"
 elif [ `echo $debian_version|grep -c "stretch"` == 1  ]
 then
+    echo "Manually installing librdkafka dependencies..."
+    echo "\n"
+    echo "\n"
     wget -P /tmp/ http://ftp.de.debian.org/debian/pool/main/libr/librdkafka/librdkafka1_0.11.6-1~bpo9+1_armhf.deb
     wget -P /tmp/ http://ftp.de.debian.org/debian/pool/main/libr/librdkafka/librdkafka++1_0.11.6-1~bpo9+1_armhf.deb
     wget -P /tmp/ http://ftp.de.debian.org/debian/pool/main/libr/librdkafka/librdkafka-dev_0.11.6-1~bpo9+1_armhf.deb
@@ -45,7 +51,10 @@ else
 fi
 
 # Install requirements with pip
-cd $PWD
+echo "Installing python requirements with pip..."
+echo "\n"
+echo "\n"
+cd $MESPDIR
 for package in $(cat requirements.txt); do
     sudo pip install package
     if [ $? -ne 0  ]; then
@@ -56,14 +65,24 @@ done
 
 # Install MESP as a systemd service
 # Edit Unit file
-CMD=$PWD"/py/agent.py -f "$PWD"/conf/agent.ini"
-STR=`awk -v var="$CMD" '{if(/ExecStart=/) {print$0var}}' $PWD/conf/agent.service`
-echo $STR
-sed -i "s:ExecStart=:$STR:g" $PWD/conf/agent.service
+echo "Creating Unit file start agent.py as a Systemd service..."
+echo "\n"
+echo "\n"
+CMD=$MESPDIR"/py/agent.py -f "$MESPDIR"/conf/agent.ini"
+
+# Add the user under who the service will run
+STR1=`awk -v var="$USER" '{if(/User=/) {print$0var}}' $MESPDIR/conf/agent.service`
+sed -i "s:ExecStart=:$STR1:g" $MESPDIR/conf/agent.service
+
+
+# Adding command to be excecuted by systemd
+STR2=`awk -v var="$CMD" '{if(/ExecStart=/) {print$0var}}' $MESPDIR/conf/agent.service`
+echo $STR2
+sed -i "s:ExecStart=:$STR2:g" $MESPDIR/conf/agent.service
 
 # Link Unit file to systemd dir
-echo "Linking file "$PWD"/py/agent.py to systemd directory"
+echo "Linking file "$MESPDIR"/py/agent.py to systemd directory"
 chmod 664 conf/agent.service
-sudo ln -s $PWD/conf/agent.service /etc/systemd/system/agent.service
+sudo ln -sf $MESPDIR/conf/agent.service /etc/systemd/system/agent.service
 sudo systemctl daemon-reload
 echo "Done!"
