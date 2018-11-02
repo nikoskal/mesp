@@ -195,9 +195,8 @@ def read_data(threadName, q, istr):
             queueLock.release()
             # print("%s processing %s" % (threadName, data))
             time.sleep(1)
-        except IOError:
-            logger.debug('Cannot open file: sensed_data')
-            logger.debug('Make sure that negative_list file exists in the same folder as ??.py')
+        except IOError as io:
+            logger.debug(io)
 
 
 def process_data(threadName, q):
@@ -288,7 +287,7 @@ def posttoorion(snapshot_raw, schema):
     volume = sys.getsizeof(json)
     logger.debug("translation time")
     logger.info("entity id, volume, translation_time")
-    logger.info(str(pts), volume, translation_time)
+    logger.info("{}, {}, {}".format(str(pts), volume, translation_time))
 
     if _url:
         url = _url + '/v2/entities'
