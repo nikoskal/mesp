@@ -65,7 +65,7 @@ def _setup_argparser():
     gen_opts.add_argument("-f", "--config-file", metavar="[c]onfig-file",
                           help="Configuration file for agent.py",
                           type=str,
-                          default="agent.ini")
+                          default="../conf/agent.ini")
     gen_opts.add_argument("--version",
                           help="print version information and exit",
                           action="store_true")
@@ -172,7 +172,12 @@ def read_data(threadName, q, istr):
                     continue
                     # break
             if isinstance(istr, Consumer):
-                msg =istr.poll(1.0)
+                try:
+                    msg = istr.poll(10)
+                except SerializerError as e:
+                    print("Message deserialization failed for {}: {}".format(msg, e))
+                    break
+
                 if not msg:
                     continue
                 if msg.error():
@@ -181,7 +186,7 @@ def read_data(threadName, q, istr):
                     else:
                         logger.debug(msg.error())
                         break
-                data = msg.value().decode('utf-8')
+                data = msg.value()
                 logger.debug(data)
 
             queueLock.acquire()
@@ -388,6 +393,11 @@ if __name__ == "__main__":
         writerClass = OrionWriter
         istream = open(SERIAL('FILE'), 'r')
     elif config.has_option('KAFKA', 'BROKER'):
+        (os, ver, _) = platform.linux_distribution()
+        if( os != 'debian' or int(ver) < 9):
+            print("OS version does not support Kafka consumer.")
+            print("Please upgrade to Debian version >=9 (Stretch).")
+            sys.exit(-1)
         # Check for essential parameters
         if not(KAFKA('BROKER') or KAFKA('GROUP') or KAFKA('TOPIC')):
             logger.debug("Please specify all the parameters BROKER/GROUP/TOPIC for Kafka")
@@ -402,13 +412,14 @@ if __name__ == "__main__":
                 'group.id': KAFKA('GROUP'),
                 'schema.registry.url': KAFKA('SCHEMA')
                 })
+            logger.debug("Avro Consumer")
         else:
             c = Consumer({
                 'bootstrap.servers': KAFKA('BROKER'),
                 'group.id': KAFKA('GROUP'),
                 'auto.offset.reset': 'earliest'
                 })
-        c.subscribe([KAFKA('TOPIC')])
+        c.subscribe(KAFKA('TOPIC').split(','))
         istream = c
     else:
         logger.debug("Configuration file does not provide any input stream")
