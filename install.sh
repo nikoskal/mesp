@@ -1,5 +1,6 @@
 #!/bin/bash
 
+PWD=$(pwd)
 # Check the OS version and install according packages manually
 debian_version=`egrep "jessie|stretch" /etc/os-release`
 if [ `echo $debian_version|grep -c "jessie"` == 1  ]
@@ -16,8 +17,8 @@ then
         echo "Cannot install librdkafka1_0.11.6. Aborting..."
         exit -1
     fi
-    LIBRDKAFKA++=$(sudo dpkg -i librdkafka++1_0.11.6-1~bpo9+1_armhf.deb)
-    if [ "" == "$LIBRDKAFKA++"  ]; then
+    LIBRDKAFKAPP=$(sudo dpkg -i librdkafka++1_0.11.6-1~bpo9+1_armhf.deb)
+    if [ "" == "$LIBRDKAFKAPP"  ]; then
         echo "Cannot install librdkafka++1_0.11.6. Aborting..."
         exit -1
     fi
@@ -44,6 +45,7 @@ else
 fi
 
 # Install requirements with pip
+cd $PWD
 for package in $(cat requirements.txt); do
     sudo pip install package
     if [ $? -ne 0  ]; then
@@ -53,7 +55,6 @@ for package in $(cat requirements.txt); do
 done
 
 # Install MESP as a systemd service
-PWD=$(pwd)
 # Edit Unit file
 CMD=$PWD"/py/agent.py -f "$PWD"/conf/agent.ini"
 STR=`awk -v var="$CMD" '{if(/ExecStart=/) {print$0var}}' $PWD/conf/agent.service`
