@@ -41,6 +41,13 @@ else
 
 fi
 
+
+# Installing header files for systemd
+echo "Installing header files for systemd..."
+echo "\n"
+echo "\n"
+sudo apt install libsystemd-dev
+
 # Print the Kernel version
 kernel_version=`uname -a|awk '{print $3}'`
 if [ $kernel_version == "4.4"  ]
