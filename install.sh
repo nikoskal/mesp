@@ -79,7 +79,7 @@ CMD=$MESPDIR"/py/agent.py -f "$MESPDIR"/conf/agent.ini"
 
 # Add the user under who the service will run
 STR1=`awk -v var="$USER" '{if(/User=/) {print$0var}}' $MESPDIR/conf/agent.service`
-sed -i "s:ExecStart=:$STR1:g" $MESPDIR/conf/agent.service
+sed -i "s:User=:$STR1:g" $MESPDIR/conf/agent.service
 
 
 # Adding command to be excecuted by systemd
