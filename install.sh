@@ -3,8 +3,8 @@
 MESPDIR=$(pwd)
 # Check the OS version and install according packages manually
 echo "Checking OS version requirements..."
-echo "\n"
-echo "\n"
+echo ""
+echo ""
 debian_version=`egrep "jessie|stretch" /etc/os-release`
 if [ `echo $debian_version|grep -c "jessie"` == 1  ]
 then
@@ -12,8 +12,8 @@ then
 elif [ `echo $debian_version|grep -c "stretch"` == 1  ]
 then
     echo "Manually installing librdkafka dependencies..."
-    echo "\n"
-    echo "\n"
+    echo ""
+    echo ""
     wget -P /tmp/ http://ftp.de.debian.org/debian/pool/main/libr/librdkafka/librdkafka1_0.11.6-1~bpo9+1_armhf.deb
     wget -P /tmp/ http://ftp.de.debian.org/debian/pool/main/libr/librdkafka/librdkafka++1_0.11.6-1~bpo9+1_armhf.deb
     wget -P /tmp/ http://ftp.de.debian.org/debian/pool/main/libr/librdkafka/librdkafka-dev_0.11.6-1~bpo9+1_armhf.deb
@@ -44,8 +44,8 @@ fi
 
 # Installing header files for systemd
 echo "Installing header files for systemd..."
-echo "\n"
-echo "\n"
+echo ""
+echo ""
 sudo apt install libsystemd-dev
 
 # Print the Kernel version
@@ -59,11 +59,11 @@ fi
 
 # Install requirements with pip
 echo "Installing python requirements with pip..."
-echo "\n"
-echo "\n"
+echo ""
+echo ""
 cd $MESPDIR
 for package in $(cat requirements.txt); do
-    sudo pip install package
+    sudo pip install $package
     if [ $? -ne 0  ]; then
         echo "Could not install $package. Aborting..."
         exit 1
@@ -73,8 +73,8 @@ done
 # Install MESP as a systemd service
 # Edit Unit file
 echo "Creating Unit file start agent.py as a Systemd service..."
-echo "\n"
-echo "\n"
+echo ""
+echo ""
 CMD=$MESPDIR"/py/agent.py -f "$MESPDIR"/conf/agent.ini"
 
 # Add the user under who the service will run
