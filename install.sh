@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Check the OS version and install according packages manually
-debian_version=`egrep "jessie|strech" /etc/os-release`
+debian_version=`egrep "jessie|stretch" /etc/os-release`
 if [ `echo $debian_version|grep -c "jessie"` == 1  ]
 then
     echo "No Kafka support provided for Raspbian Jessie"
