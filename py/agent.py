@@ -26,6 +26,9 @@ from confluent_kafka.avro.serializer import SerializerError
 
 from serial.serialposix import Serial
 
+from classification import TensorflowClassifier
+
+
 # Add a logger
 logger = logging.getLogger(__name__)
 # instantiate the JournaldLogHandler to hook into systemd
@@ -110,6 +113,9 @@ def _setup_argparser():
     pr_opts.add_argument("-kt", "--kafka-topic", metavar='[k]afka-topic',
                           help="Topic to consume from",
                           type=str)
+    pr_opts.add_argument("-tf", "--tensorflow", metavar='[t]ensorflow',
+                         help="Classification using Tensorflow",
+                         action="store_true")
 
     return parser.parse_args()
 
@@ -176,7 +182,7 @@ def read_data(threadName, q, istr):
                 try:
                     msg = istr.poll(10)
                 except SerializerError as e:
-                    print("Message deserialization failed for {}: {}".format(msg, e))
+                    logger.error("Message deserialization failed for {}: {}".format(msg, e))
                     break
 
                 if not msg:
@@ -374,6 +380,11 @@ if __name__ == "__main__":
     SERIAL = lambda p: config.get('SERIAL', p)
     KAFKA = lambda p: config.get('KAFKA', p)
     ORION = lambda p: config.get('ORION', p)
+    CLASSFCTN = lambda p: config.get('CLASSIFICATION', p)
+
+    if args.tensorflow:
+        tfclassify = TensorflowClassifier(2, CLASSFCTN('LABELS'),
+                                          CLASSFCTN('FROZEN_GRAPH'))
 
     _url = ORION('BROKER')
     if config.has_option('SERIAL', 'USB_PORT'):
@@ -395,8 +406,8 @@ if __name__ == "__main__":
     elif config.has_option('KAFKA', 'BROKER'):
         (os, ver, _) = platform.linux_distribution()
         if( os != 'debian' or float(ver) < 9.0):
-            print("OS version does not support Kafka consumer.")
-            print("Please upgrade to Debian version >=9 (Stretch).")
+            logger.error("OS version does not support Kafka consumer.")
+            logger.error("Please upgrade to Debian version >=9 (Stretch).")
             sys.exit(-1)
         # Check for essential parameters
         if not(KAFKA('BROKER') or KAFKA('GROUP') or KAFKA('TOPIC')):
