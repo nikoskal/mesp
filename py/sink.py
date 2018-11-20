@@ -44,7 +44,7 @@ class OrionSink(GeneralSink):
         GeneralSink.__init__(self, threadID, 'Orion', name, q, queuelock,
                              schema, logger)
         self.post = self.posttoorion
-        self.self.cross_ref_unique_ids = []
+        self.cross_ref_unique_ids = []
         self.url = url
 
     def getfromorion_id(self, id):

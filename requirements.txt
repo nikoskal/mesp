@@ -18,6 +18,7 @@ Keras-Preprocessing==1.0.5
 Markdown==3.0.1
 mock==2.0.0
 numpy==1.15.4
+picamera==1.13
 pbr==5.1.1
 protobuf==3.6.1
 pykafka==2.8.0
