@@ -1,5 +1,4 @@
 import os
-import sys
 import tensorflow as tf
 
 
@@ -11,14 +10,14 @@ class TensorflowClassifier():
         os.environ['TF_CPP_MIN_LOG_LEVEL'] = str(ll)
 
         # Loads label file, strips off carriage return
-        label_lines = [line.rstrip() for line
+        self.label_lines = [line.rstrip() for line
             in tf.gfile.GFile(labels)]
 
         # Unpersists graph from file
         with tf.gfile.FastGFile(graph, 'rb') as f:
             graph_def = tf.GraphDef()
             graph_def.ParseFromString(f.read())
-             _ = tf.import_graph_def(graph_def, name='')
+            _ = tf.import_graph_def(graph_def, name='')
 
 
     def classify(self, img):
@@ -33,8 +32,6 @@ class TensorflowClassifier():
             # Sort to show labels of first prediction in order of confidence
             top_k = predictions[0].argsort()[-len(predictions[0]):][::-1]
             for node_id in top_k:
-                human_string = label_lines[node_id]
+                human_string = self.label_lines[node_id]
                 score = predictions[0][node_id]
                 print('%s (score = %.5f)' % (human_string, score))
-
-
