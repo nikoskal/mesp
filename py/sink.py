@@ -26,7 +26,7 @@ class GeneralSink(threading.Thread):
                 self.lock.acquire()
                 data = self.q.get()
                 self.lock.release()
-                # print("%s Got data %s" % (threadName, data))
+                # self.logger.debug("%s Got data %s" % (threadName, data))
                 self.post(data, self.schema)
             else:
                 continue
@@ -39,7 +39,7 @@ class GeneralSink(threading.Thread):
 
 class OrionSink(GeneralSink):
 
-    def __init__(self, threadID, name, q, queuelock, schema, url, logger):
+    def __init__(self, threadID, name, q, queuelock, url, schema, logger):
         self.logger = logger
         GeneralSink.__init__(self, threadID, 'Orion', name, q, queuelock,
                              schema, logger)

@@ -58,7 +58,7 @@ class GeneralSource(threading.Thread):
                     self.logger.debug(data)
 
                 self.lock.acquire()
-                #self.q.put(data[0])
+                self.q.put(data[0])
                 self.lock.release()
                 # print("%s processing %s" % (threadName, data))
                 time.sleep(1)
@@ -66,10 +66,10 @@ class GeneralSource(threading.Thread):
                 self.logger.debug(io)
 
 
-        def run(self):
-            self.logger.info("Starting %s %s" % (self.stype, self.name))
-            self.read_data(self.name, self.q, self.istr)
-            self.logger.info("Exiting %s %s" % (self.stype, self.name))
+    def run(self):
+        self.logger.info("Starting %s %s" % (self.stype, self.name))
+        self.read_data(self.name, self.q, self.istr)
+        self.logger.info("Exiting %s %s" % (self.stype, self.name))
 
 
 class SerialSource(GeneralSource):
