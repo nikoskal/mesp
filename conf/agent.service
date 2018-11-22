@@ -1,0 +1,14 @@
+[Unit]
+Description=Serial Agent
+After=network.target
+
+[Service]
+Type=simple
+StandardOutput=journal
+StandardError=journal
+User=
+ExecStart=
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,71 @@
+{
+  "subject": "porto_Location-value",
+  "version": 5,
+  "id": 669,
+  "schema": {
+    "type": "record",
+    "name": "Location",
+    "namespace": "eu.rawfie.uxv",
+    "doc": "Geographic location",
+    "fields": [
+      {
+        "name": "latitude",
+        "type": "double",
+        "doc": "Latitude in the WGS  reference coordinate system",
+        "unit": "rad",
+        "min": -1.570796326794897,
+        "max": 1.570796326794897
+      },
+      {
+        "name": "longitude",
+        "type": "double",
+        "doc": "Longitude in the WGS  reference coordinate system",
+        "unit": "rad",
+        "min": -3.141592653589793,
+        "max": 3.141592653589793
+      },
+      {
+        "name": "height",
+        "type": "float",
+        "doc": "Height above the WGS  ellipsoid",
+        "unit": "m"
+      },
+      {
+        "name": "n",
+        "type": "double",
+        "doc": "The North offset of the North/East/Down field with respect to Latitude/Longitude/Height",
+        "unit": "m"
+      },
+      {
+        "name": "e",
+        "type": "double",
+        "doc": "The East offset of the North/East/Down field with respect to Latitude/Longitude/Height",
+        "unit": "m"
+      },
+      {
+        "name": "d",
+        "type": "double",
+        "doc": "The Down offset of the North/East/Down field with respect to Latitude/Longitude/Height",
+        "unit": "m"
+      },
+      {
+        "name": "depth",
+        "type": [
+          "float",
+          "null"
+        ],
+        "doc": "Depth",
+        "unit": "m"
+      },
+      {
+        "name": "altitude",
+        "type": [
+          "float",
+          "null"
+        ],
+        "doc": "Altitude",
+        "unit": "m"
+      }
+    ]
+  }
+}
