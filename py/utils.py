@@ -9,7 +9,7 @@ def calltoopenweathermap(logger):
     logger.debug(response.json())
 
 
-def translate(snapshot_dict, timestamp, logger):
+def translate(snapshot_dict, timestamp, classf_table, logger):
 
     json = {
 
@@ -43,5 +43,13 @@ def translate(snapshot_dict, timestamp, logger):
             "type": types[k]
         }
         json.update(value)
+
+    for k,v in classf_table.iteritems():
+        obj = {}
+        obj["value"] = str(v) 
+        obj["type"] = "Number"
+        json[k.replace(' ', '_')] = obj
+
+
     logger.debug(json)
     return json

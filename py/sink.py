@@ -20,20 +20,25 @@ class GeneralSink(threading.Thread):
         self.post = None
         self.exitFlag = 0
 
-    def process_data(self, threadName, q):
+    def _process_data(self, classf_table):
+        self.process_data(self.name, self.q, classf_table)
+
+    def process_data(self, threadName, q, classf_table):
         while not self.exitFlag:
             if not self.q.empty():
                 self.lock.acquire()
                 data = self.q.get()
                 self.lock.release()
-                # self.logger.debug("%s Got data %s" % (threadName, data))
-                self.post(data, self.schema)
+                self.logger.debug("{} Got data {}".format(self.name, data))
+                self.logger.debug("Classification: {}".format(classf_table))
+                self.post(data, self.schema, classf_table)
+                break
             else:
                 continue
 
     def run(self):
         self.logger.info("Starting %s %s" % (self.stype, self.name))
-        self.process_data(self.name, self.q)
+        self.process_data(self.name, self.q, None)
         self.logger.info("Exiting %s %s" % (self.stype, self.name))
 
 
@@ -86,7 +91,7 @@ class OrionSink(GeneralSink):
             else:
                 self.logger.debug("not found")
 
-    def posttoorion(self, snapshot_raw, schema):
+    def posttoorion(self, snapshot_raw, schema, classf_table):
         self.logger.info("Parsing data...")
         self.logger.info(snapshot_raw)
 
@@ -112,7 +117,7 @@ class OrionSink(GeneralSink):
         pts = datetime.datetime.now().strftime('%s')
         # print(pts)
 
-        json = translate(snapshot, pts, self.logger)
+        json = translate(snapshot, pts, classf_table, self.logger)
         ts2 = time.time()
         self.logger.debug(json)
         # print "posting"
@@ -122,6 +127,8 @@ class OrionSink(GeneralSink):
         self.logger.debug("translation time")
         self.logger.info("entity id, volume, translation_time")
         self.logger.info("{}, {}, {}".format(str(pts), volume, translation_time))
+
+        #json = json.loads(json)
 
         if self.url:
             url = self.url + '/v2/entities'

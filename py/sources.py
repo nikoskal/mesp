@@ -20,6 +20,9 @@ class GeneralSource(threading.Thread):
         self.logger = logger
         self.exitFlag = 0
 
+    def _read_data(self):
+        self.read_data(self.name, self.q, self.istr)
+
     def read_data(self, threadName, q, istr):
         while not self.exitFlag:
             try:
@@ -34,11 +37,11 @@ class GeneralSource(threading.Thread):
                     # if line:
                     # if findWholeWord('UNIQUEDID'):
 
-                    if line:
-                        data = line.split()
-                    else:
+                    if not line:
                         continue
-                        # break
+
+                    data = line.split()
+
                 if isinstance(self.istr, Consumer):
                     try:
                         msg = self.istr.poll(10)
@@ -54,14 +57,14 @@ class GeneralSource(threading.Thread):
                         else:
                             self.logger.debug(msg.error())
                             break
+
                     data = msg.value()
                     self.logger.debug(data)
 
                 self.lock.acquire()
                 self.q.put(data[0])
                 self.lock.release()
-                # print("%s processing %s" % (threadName, data))
-                time.sleep(1)
+                break
             except IOError as io:
                 self.logger.debug(io)
 

@@ -5,6 +5,7 @@ import platform
 import threading
 import logging
 import sys
+import time
 import ConfigParser
 import re
 import argparse
@@ -117,9 +118,10 @@ if __name__ == "__main__":
     CLASSFCTN = lambda p: config.get('CLASSIFICATION', p)
 
     if args.tensorflow:
+        camera = Camera(CLASSFCTN('IMAGES_DIR'), logger)
         tfclassify = TensorflowClassifier(2, CLASSFCTN('LABELS'),
-                                          CLASSFCTN('FROZEN_GRAPH'))
-        camera = Camera(CLASSFCTN('IMAGES_DIR'))
+                                          CLASSFCTN('FROZEN_GRAPH'),
+                                          camera, logger)
 
     _url = ORION('BROKER')
     if config.has_option('SERIAL', 'USB_PORT'):
@@ -151,18 +153,8 @@ if __name__ == "__main__":
         logger.debug("SERIAL/KAFKA")
         sys.exit(-1)
 
-
-    readerThreadList = []
-    for i in range(args.read_threads):
-        readerThreadList.append("Reader-"+ str(i+1))
-
-    writerThreadList = []
-    for i in range(args.write_threads):
-        writerThreadList.append("Writer-"+ str(i+1))
-
     queueLock = threading.Lock()
     workQueue = Queue.Queue()
-    threads = []
     threadID = 1
 
     try:
@@ -181,21 +173,31 @@ if __name__ == "__main__":
         sys.exit(-1)
 
     # Create new threads
-    for tName in readerThreadList:
-        thread = source(threadID, tName, workQueue, queueLock, lconfig, logger)
-        thread.start()
-        threads.append(thread)
+    readerThreadList = []
+    for i in range(args.read_threads):
+        tname = "Reader-%d" % i
+        thread = source(threadID, tname, workQueue, queueLock, lconfig, logger)
+        # thread.start()
+        readerThreadList.append(thread)
         threadID += 1
 
-    for tName in writerThreadList:
-        thread = sink(threadID, tName, workQueue, queueLock, _url, schema, logger)
-        thread.start()
-        threads.append(thread)
+    writerThreadList = []
+    for i in range(args.write_threads):
+        tname = "Writer-%d" % i
+        thread = sink(threadID, tname, workQueue, queueLock, _url, schema, logger)
+        # thread.start()
+        writerThreadList.append(thread)
         threadID += 1
 
-    # Wait for queue to empty
-    #while not exitFlag:
-    #    pass
+    while 1:
+        if(camera and tfclassify):
+            top_k = tfclassify.classify(camera.capture())
+            if(len(readerThreadList) > 0 and
+               len(writerThreadList) > 0):
+                readerThreadList[0]._read_data()
+                writerThreadList[0]._process_data(top_k)
+                time.sleep(45)
+
 
     # Wait for threads to complete
     for t in threads:
