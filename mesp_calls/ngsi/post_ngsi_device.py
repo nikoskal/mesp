@@ -17,7 +17,8 @@ def posttoorion(dm_attr1, dm_attr2, dm_attr3):
     #ngsi format based on:
     # fiware_ngsi_datamodels/specs/Device/Device/schema.json
     # https://fiware.github.io/dataModels/specs/Device/Device/schema.json
-
+    # this is the RaspberryPi
+    # TODO create another one device for arduino
     json = {
         "id": "urn:ngsi:Device:RaspberryPi:d9e7-43cd-9c68-1111",
           "type": "Device",

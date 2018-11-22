@@ -17,7 +17,7 @@ def posttoorion(dm_attr1, dm_attr2, dm_attr3):
     #ngsi format based on:
     # fiware_ngsi_datamodels/specs/Device/DeviceModel/schema.json
     # https://fiware.github.io/dataModels/specs/Device/DeviceModel/schema.json
-
+    # TODO put here the main values collected by Arduiono sensors
     json_forest_fire = {
             "id": "Greenspace:rafina:1",
             "type": "GreenspaceRecord",
@@ -60,7 +60,8 @@ def posttoorion(dm_attr1, dm_attr2, dm_attr3):
                 "type": "Reference"
             },
             "refDevice": {
-                "value": "device:uniqueid:1234",
+                "value": ["urn:ngsi:Device:RaspberryPi:d9e7-43cd-9c68-1111",
+                          "urn:ngsi:Device:Arduino:d9e7-43cd-9c68-1111"],
                 "type": "Reference"
             }
     }

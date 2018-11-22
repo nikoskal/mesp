@@ -18,45 +18,45 @@ def posttoorion(dm_attr1, dm_attr2, dm_attr3):
     # fiware_ngsi_datamodels/specs/Device/DeviceModel/schema.json
     # https://fiware.github.io/dataModels/specs/Device/DeviceModel/schema.json
 
+    # sto id vale to timestamp ekei pou exei epoch123
     json_forest_fire = {
-        "id": "Alert:security:forestFire:123",
+        "id": "Alert:security:forestFire:epoch123",
         "type": "Alert",
         "category": {
-        "value":"security",
-        "type":"text"
-        },
+            "value":"security",
+            "type":"text"
+            },
         "subCategory": {
-        "value":"forestFire",
-        "type":"text"
+            "value":"forestFire",
+            "type":"text"
         },
         "severity": {
-        "value":"high",
-        "type":"text"
+            "value":"high",
+            "type":"text"
         },
         "location": {
-        "value": {
-          "type": "Point",
-          "coordinates": [
-            -104.99404,
-            39.75621
-          ]
-        },
-        "type": "geo:json"
+            "value": {
+                "type": "Point",
+                "coordinates": [
+                -104.99404,
+                39.75621
+              ]
+            },
+            "type": "geo:json"
         },
         "dateIssued": {
-        "value":"2017-01-02T09:25:55.00Z",
-        "type":"date"
+            "value":"2017-01-02T09:25:55.00Z",
+            "type":"date"
         },
         "description": {
-        "value":"forest fire detected in the area of xxxx",
-        "type":"text"
+            "value":"forest fire detected in the area of xxxx",
+            "type":"text"
         },
         "alertSource": {
-        "value":"Based on iMESP image classification engine",
-        "type":"text"
+            "value":"Based on iMESP image classification engine",
+            "type":"text"
         }
     }
-
 
     print json_forest_fire
 

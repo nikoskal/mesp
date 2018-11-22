@@ -18,7 +18,7 @@ def posttoorion(dm_attr1, dm_attr2, dm_attr3):
     # fiware_ngsi_datamodels/specs/Device/DeviceModel/schema.json
     # https://fiware.github.io/dataModels/specs/Device/DeviceModel/schema.json
 
-    json_forest_fire = {
+    json_fireRisk = {
         "id": "Alert:weather:fireRisk:123",
         "type": "Alert",
         "category": {
@@ -58,14 +58,14 @@ def posttoorion(dm_attr1, dm_attr2, dm_attr3):
     }
 
 
-    print json_forest_fire
+    print json_fireRisk
 
-    json_bytes = sys.getsizeof(json_forest_fire)
+    json_bytes = sys.getsizeof(json_fireRisk)
     headers_bytes = sys.getsizeof(headers)
     total = json_bytes + headers_bytes
     print json_bytes,headers_bytes, total
 
-    response = requests.post(url, headers=headers, json=json_forest_fire)
+    response = requests.post(url, headers=headers, json=json_fireRisk)
     print(str(response))
     return response
 
