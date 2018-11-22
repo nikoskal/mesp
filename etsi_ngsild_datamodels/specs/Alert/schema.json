@@ -1,0 +1,25 @@
+{
+  "@context": {
+    "category": {
+      "@type": "text",
+      "@id": "https://www.gsma.com/iot/iot-big-data/ngsi-ld/category"
+    },
+    "subCategory": {
+      "@type": "text",
+      "@id": "https://www.gsma.com/iot/iot-big-data/ngsi-ld/subCategory"
+    },
+    "severity": {
+      "@type": "text",
+      "@id": "https://www.gsma.com/iot/iot-big-data/ngsi-ld/severity"
+    },
+    "location": "http://uri.etsi.org/ngsi-ld/location",
+    "dateIssued": {
+      "@type": "DateTime",
+      "@id": "https://www.gsma.com/iot/iot-big-data/ngsi-ld/dateIssued"
+    },
+    "alertSource": {
+      "@type": "text",
+      "@id": "https://www.gsma.com/iot/iot-big-data/ngsi-ld/alertSource"
+    }
+  }
+}

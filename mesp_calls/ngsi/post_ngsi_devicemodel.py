@@ -15,25 +15,19 @@ def posttoorion(dm_attr1, dm_attr2, dm_attr3):
     headers = {'Accept': 'application/json'}
 
     #ngsi format based on:
-    # fiware_ngsi_datamodels/specs/Device/Device/schema.json
-    # https://fiware.github.io/dataModels/specs/Device/Device/schema.json
+    # fiware_ngsi_datamodels/specs/Device/DeviceModel/schema.json
+    # https://fiware.github.io/dataModels/specs/Device/DeviceModel/schema.json
 
     json = {
-        "id": "device-9845A",
-        "type": "Device",
+        "id": "urn:ngsi:DeviceModel:RaspberryPi:d9e7-43cd-9c68-1111",
+        "type": "DeviceModel",
+        "name": "myDevice Sensor for Containers 345",
+        "brandName": "myDevice",
+        "modelName": dm_attr1,
+        "manufacturerName": "myDevice Inc.",
         "category": ["computer"],
-        "controlledProperty": ["fillingLevel","temperature"],
-        "controlledAsset": ["wastecontainer-Osuna-100"],
-        "ipAddress": ["192.14.56.78"],
-        "mcc": "214",
-        "mnc": "07",
-        "batteryLevel": 0.75,
-        "serialNumber": "9845A",
-        "refDeviceModel": "myDevice-wastecontainer-sensor-345",
-        "value": "l%3D0.22%3Bt%3D21.2",
-        "deviceState": "ok",
-        "dateFirstUsed": "2014-09-11T11:00:00Z",
-        "owner": ["http://person.org/leon"]
+        "function": ["sensing"],
+        "controlledProperty": ["fillingLevel", "temperature"]
     }
 
 
