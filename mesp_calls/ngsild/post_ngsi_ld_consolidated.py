@@ -79,16 +79,15 @@ def posttoorion_airquality (UNIQUEID, GPS_x,GPS_y, EPOCH, GAS_1):
 
 
 
-def posttoorion_flame (UNIQUEID, GPS_x,GPS_y, EPOCH, FLAME_1):
+def posttoorion_flame_alert (UNIQUEID, GPS_x,GPS_y, EPOCH, FLAME_1):
     # consider converting epoch to date e.g. now = datetime.datetime(EPOCH)
     now = datetime.datetime.now()
 
-
-    json_forest_fire ={"@context": [
+    json_forest_fire_flame ={"@context": [
         "https://forge.etsi.org/gitlab/NGSI-LD/NGSI-LD/raw/master/coreContext/ngsi-ld-core-context.json",
         "https://raw.githubusercontent.com/nikoskal/mesp/mdpi/etsi_ngsild_datamodels/specs/Alert/schema.json"
         ],
-        "id": "urn:ngsi-ld:Alert:security:"+UNIQUEID,
+        "id": "urn:ngsi-ld:Alert:security:flame:"+UNIQUEID,
         "type": "Alert",
         "source": "GSMA",
         "dataProvider": "GSMA",
@@ -127,21 +126,80 @@ def posttoorion_flame (UNIQUEID, GPS_x,GPS_y, EPOCH, FLAME_1):
         }
     }
 
-
-
     url = 'http://localhost:1026/v2/entities?options=keyValues'
     headers = {'Accept': 'application/json'}
-    print json_forest_fire
+    print json_forest_fire_flame
 
-    json_bytes = sys.getsizeof(json_forest_fire)
+    json_bytes = sys.getsizeof(json_forest_fire_flame)
     headers_bytes = sys.getsizeof(headers)
     total = json_bytes + headers_bytes
     print json_bytes, headers_bytes, total
 
-    response = requests.post(url, headers=headers, json=json_forest_fire)
+    response = requests.post(url, headers=headers, json=json_forest_fire_flame)
     print(str(response))
     return response
 
+
+
+def posttoorion_image_alert (UNIQUEID, GPS_x,GPS_y, EPOCH, IMAGE):
+    # consider converting epoch to date e.g. now = datetime.datetime(EPOCH)
+    now = datetime.datetime.now()
+
+    json_forest_fire_image ={"@context": [
+        "https://forge.etsi.org/gitlab/NGSI-LD/NGSI-LD/raw/master/coreContext/ngsi-ld-core-context.json",
+        "https://raw.githubusercontent.com/nikoskal/mesp/mdpi/etsi_ngsild_datamodels/specs/Alert/schema.json"
+        ],
+        "id": "urn:ngsi-ld:Alert:security:image:"+UNIQUEID,
+        "type": "Alert",
+        "source": "GSMA",
+        "dataProvider": "GSMA",
+        "entityVersion": 2.0,
+
+        "category": {
+            "type": "Property",
+            "value": "security"
+        },
+        "subCategory": {
+            "value": "forestFire",
+            "type": "text"
+        },
+        "severity": {
+            "value": IMAGE,
+            "type": "text"
+        },
+        "location": {
+            "value": {
+                "type": "Point",
+                "coordinates": [GPS_x,GPS_y]
+            },
+            "type": "geo:json"
+        },
+        "dateIssued": {
+            "value": "2017-01-02T09:25:55.00Z",
+            "type": "date"
+        },
+        "description": {
+            "value": "forest fire detected in the area of xxxx",
+            "type": "text"
+        },
+        "alertSource": {
+            "value": "Based on iMESP image classification engine",
+            "type": "text"
+        }
+    }
+
+    url = 'http://localhost:1026/v2/entities?options=keyValues'
+    headers = {'Accept': 'application/json'}
+    print json_forest_fire_image
+
+    json_bytes = sys.getsizeof(json_forest_fire_image)
+    headers_bytes = sys.getsizeof(headers)
+    total = json_bytes + headers_bytes
+    print json_bytes, headers_bytes, total
+
+    response = requests.post(url, headers=headers, json=json_forest_fire_image)
+    print(str(response))
+    return response
 
 
 
@@ -221,6 +279,7 @@ FLAME_1= "ll"
 TEMP_AIR_1 = "hh"
 GAS_1 = "pp"
 TEMP_SOIL_1 = "oo"
+IMAGE = "zz"
 
 
 # UNIQUEID;NODEID;GPS#1;EPOCH;HUMIDITY#1;FLAME#1;TEMP-AIR#1;GAS#1;TEMP-SOIL#1;
@@ -233,7 +292,11 @@ posttoorion_airquality (UNIQUEID, GPS_x,GPS_y, EPOCH,GAS_1)
 print "posting GAS_1:done"
 
 print "posting FLAME#1"
-posttoorion_flame (UNIQUEID,GPS_x, GPS_y, EPOCH, FLAME_1)
+posttoorion_flame_alert (UNIQUEID,GPS_x, GPS_y, EPOCH, FLAME_1)
+print "posting flame:done"
+
+print "posting IMAGE"
+posttoorion_image_alert (UNIQUEID,GPS_x, GPS_y, EPOCH, IMAGE)
 print "posting flame:done"
 
 print "posting greenspace"

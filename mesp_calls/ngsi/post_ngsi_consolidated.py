@@ -277,7 +277,7 @@ posttoorion_flame_alert (UNIQUEID,GPS_x, GPS_y, EPOCH, FLAME_1)
 print "posting flame:done"
 
 print "posting IMAGE"
-posttoorion_flame_alert (UNIQUEID,GPS_x, GPS_y, EPOCH, IMAGE)
+posttoorion_image_alert (UNIQUEID,GPS_x, GPS_y, EPOCH, IMAGE)
 print "posting IMAGE:done"
 
 print "posting greenspace"
