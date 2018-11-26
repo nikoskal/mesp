@@ -73,12 +73,12 @@ def posttoorion_airquality (UNIQUEID, GPS_x,GPS_y, EPOCH, GAS_1):
 
 
 
-def posttoorion_flame (UNIQUEID, GPS_x,GPS_y, EPOCH, FLAME_1):
+def posttoorion_flame_alert (UNIQUEID, GPS_x,GPS_y, EPOCH, FLAME_1):
     # consider converting epoch to date e.g. now = datetime.datetime(EPOCH)
     now = datetime.datetime.now()
 
-    json_forest_fire = {
-        "id": "Alert:security:forestFire:"+UNIQUEID,
+    json_forest_fire_flame = {
+        "id": "Alert:security:forestFireFlame:"+UNIQUEID,
         "type": "Alert",
         "category": {
             "value": "security",
@@ -108,6 +108,60 @@ def posttoorion_flame (UNIQUEID, GPS_x,GPS_y, EPOCH, FLAME_1):
             "type": "text"
         },
         "alertSource": {
+            "value": "Based on iMESP flame detector",
+            "type": "text"
+        }
+    }
+
+    url = 'http://localhost:1026/v2/entities?options=keyValues'
+    headers = {'Accept': 'application/json'}
+    print json_forest_fire_flame
+
+    json_bytes = sys.getsizeof(json_forest_fire_flame)
+    headers_bytes = sys.getsizeof(headers)
+    total = json_bytes + headers_bytes
+    print json_bytes, headers_bytes, total
+
+    response = requests.post(url, headers=headers, json=json_forest_fire_flame)
+    print(str(response))
+    return response
+
+
+def posttoorion_image_alert (UNIQUEID, GPS_x,GPS_y, EPOCH, classification_image):
+    # consider converting epoch to date e.g. now = datetime.datetime(EPOCH)
+    now = datetime.datetime.now()
+
+    json_forest_fire_image = {
+        "id": "Alert:security:forestFireImage:"+UNIQUEID,
+        "type": "Alert",
+        "category": {
+            "value": "security",
+            "type": "text"
+        },
+        "subCategory": {
+            "value": "forestFire",
+            "type": "text"
+        },
+        "severity": {
+            "value": classification_image,
+            "type": "text"
+        },
+        "location": {
+            "value": {
+                "type": "Point",
+                "coordinates": [GPS_x,GPS_y]
+            },
+            "type": "geo:json"
+        },
+        "dateIssued": {
+            "value": "2017-01-02T09:25:55.00Z",
+            "type": "date"
+        },
+        "description": {
+            "value": "forest fire detected in the area of xxxx",
+            "type": "text"
+        },
+        "alertSource": {
             "value": "Based on iMESP image classification engine",
             "type": "text"
         }
@@ -115,17 +169,16 @@ def posttoorion_flame (UNIQUEID, GPS_x,GPS_y, EPOCH, FLAME_1):
 
     url = 'http://localhost:1026/v2/entities?options=keyValues'
     headers = {'Accept': 'application/json'}
-    print json_forest_fire
+    print json_forest_fire_image
 
-    json_bytes = sys.getsizeof(json_forest_fire)
+    json_bytes = sys.getsizeof(json_forest_fire_image)
     headers_bytes = sys.getsizeof(headers)
     total = json_bytes + headers_bytes
     print json_bytes, headers_bytes, total
 
-    response = requests.post(url, headers=headers, json=json_forest_fire)
+    response = requests.post(url, headers=headers, json=json_forest_fire_image)
     print(str(response))
     return response
-
 
 
 
@@ -134,7 +187,7 @@ def posttoorion_greenspace (UNIQUEID,GPS_x, GPS_y, EPOCH, HUMIDITY_1, TEMP_AIR_1
     # consider converting epoch to date e.g. now = datetime.datetime(EPOCH)
     now = datetime.datetime.now()
 
-    json_forest_fire = {
+    json_greenspace = {
             "id": "Greenspace:rafina:1"+UNIQUEID,
             "type": "GreenspaceRecord",
 
@@ -172,7 +225,8 @@ def posttoorion_greenspace (UNIQUEID,GPS_x, GPS_y, EPOCH, HUMIDITY_1, TEMP_AIR_1
             },
             "refAlert": {
                 "value": ["Alert:security:forestFire:123",
-                          "Alert:weather:fireRisk:123"],
+                          "Alert:weather:fireRisk:123",
+                          ],
                 "type": "Reference"
             },
             "refDevice": {
@@ -181,6 +235,19 @@ def posttoorion_greenspace (UNIQUEID,GPS_x, GPS_y, EPOCH, HUMIDITY_1, TEMP_AIR_1
                 "type": "Reference"
             }
     }
+
+    url = 'http://localhost:1026/v2/entities?options=keyValues'
+    headers = {'Accept': 'application/json'}
+    print json_greenspace
+
+    json_bytes = sys.getsizeof(json_greenspace)
+    headers_bytes = sys.getsizeof(headers)
+    total = json_bytes + headers_bytes
+    print json_bytes, headers_bytes, total
+
+    response = requests.post(url, headers=headers, json=json_greenspace)
+    print(str(response))
+    return response
 
 
 UNIQUEID = "kk"
@@ -193,6 +260,7 @@ FLAME_1= "ll"
 TEMP_AIR_1 = "hh"
 GAS_1 = "pp"
 TEMP_SOIL_1 = "oo"
+IMAGE = ""
 
 
 # UNIQUEID;NODEID;GPS#1;EPOCH;HUMIDITY#1;FLAME#1;TEMP-AIR#1;GAS#1;TEMP-SOIL#1;
@@ -205,8 +273,12 @@ posttoorion_airquality (UNIQUEID, GPS_x,GPS_y, EPOCH,GAS_1)
 print "posting GAS_1:done"
 
 print "posting FLAME#1"
-posttoorion_flame (UNIQUEID,GPS_x, GPS_y, EPOCH, FLAME_1)
+posttoorion_flame_alert (UNIQUEID,GPS_x, GPS_y, EPOCH, FLAME_1)
 print "posting flame:done"
+
+print "posting IMAGE"
+posttoorion_flame_alert (UNIQUEID,GPS_x, GPS_y, EPOCH, IMAGE)
+print "posting IMAGE:done"
 
 print "posting greenspace"
 posttoorion_greenspace (UNIQUEID,GPS_x, GPS_y, EPOCH, HUMIDITY_1, TEMP_AIR_1, TEMP_SOIL_1)

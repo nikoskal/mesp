@@ -39,8 +39,12 @@ def posttoorion(UNIQUEID, GPS_1, EPOCH, HUMIDITY_1, FLAME_1,TEMP_AIR_1,GAS_1,TEM
         },
         "TEMP_SOIL_1": {
             "value": TEMP_AIR_1
-        }
-}
+        },
+        "IMAGE_CLASS": {
+            "value": IMAGE_CLASS
+        },
+
+    }
 
 
 
@@ -63,7 +67,8 @@ FLAME_1= "ll"
 TEMP_AIR_1 = "hh"
 GAS_1 = "pp"
 TEMP_SOIL_1 = "oo"
+IMAGE_CLASS = "zz"
 
 
 # UNIQUEID;NODEID;GPS#1;EPOCH;HUMIDITY#1;FLAME#1;TEMP-AIR#1;GAS#1;TEMP-SOIL#1;
-posttoorion(UNIQUEID, GPS_1, EPOCH, HUMIDITY_1, FLAME_1,TEMP_AIR_1,GAS_1,TEMP_SOIL_1  )
+posttoorion(UNIQUEID, GPS_1, EPOCH, HUMIDITY_1, FLAME_1,TEMP_AIR_1,GAS_1,TEMP_SOIL_1, IMAGE_CLASS)
