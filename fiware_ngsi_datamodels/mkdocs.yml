@@ -45,7 +45,7 @@ pages:
   - Parks & Gardens:
       - Introduction         : ParksAndGardens/doc/introduction.md
       - Garden               : ParksAndGardens/Garden/doc/spec.md
-      - GreenspaceRecord     : ParksAndGardens/GreenspaceRecord/doc/spec.md
+      - GreenspaceRecord     : ParksAndGardens/Agri-Parcel/doc/spec.md
       - FlowerBed            : ParksAndGardens/FlowerBed/doc/spec.md
   - Points of Interest:
       - Introduction         : PointOfInterest/doc/introduction.md
